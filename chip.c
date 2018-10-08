@@ -48,5 +48,16 @@ void chip_tick() {
 }
 
 void chip_cycle() {
+    if(PC >= MAX_ROM_SIZE) {
+        printf("Error: memory out of bounds\n");
+        exit(-1);
+    }
 
+    uint16_t op = memory[PC] << 8 | memory[PC+1];
+
+    switch(op & 0xF000) {
+        default:
+            dprint("Unknown opcode: %x\n", op);
+            PC+=2;
+    }
 }

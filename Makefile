@@ -1,5 +1,5 @@
 CC = gcc
-CCFLAGS += -g -Wall
+CCFLAGS += -g -Wall -DDEBUG
 LDFLAGS += -lGL -lglut
 
 all: chip

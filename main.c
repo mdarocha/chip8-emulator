@@ -4,6 +4,10 @@
 
 #define DISPLAY_ZOOM 5
 
+void update() {
+    chip_cycle();
+}
+
 void draw() {
     glClear(GL_COLOR_BUFFER_BIT);
     glDrawPixels(DISPLAY_WIDTH, DISPLAY_HEIGHT, GL_LUMINANCE, GL_UNSIGNED_BYTE, display);
@@ -11,7 +15,6 @@ void draw() {
 }
 
 int main(int argc, char *argv[]) {
-    printf("Hello\n");
     printf("Loading file %s\n", argv[1]);
 
     glutInit(&argc, argv);
@@ -21,9 +24,10 @@ int main(int argc, char *argv[]) {
     glutCreateWindow("chip8-emulator");
 
     glutDisplayFunc(draw);
+    glutIdleFunc(update);
 
     chip_init();
-    //chip_load(argv[1]);
+    chip_load(argv[1]);
 
     glutMainLoop();
 
