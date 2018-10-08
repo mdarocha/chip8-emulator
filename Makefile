@@ -1,6 +1,6 @@
 CC = gcc
 CCFLAGS += -g -Wall
-LDFLAGS =
+LDFLAGS += -lGL -lglut
 
 all: chip
 

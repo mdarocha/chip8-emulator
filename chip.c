@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include "chip.h"
 
+char display[DISPLAY_HEIGHT * DISPLAY_WIDTH];
+
 uint8_t memory[MEM_SIZE];
 uint8_t V[16];
 uint16_t I;
@@ -22,6 +24,8 @@ void chip_init() {
     PC = 0x200;
     SP = 0x0;
     memset(stack, 0, sizeof(uint16_t) * 16);
+
+    memset(display, 0, sizeof(char) * DISPLAY_HEIGHT * DISPLAY_WIDTH);
 }
 
 void chip_load(char *filename) {
