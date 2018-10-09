@@ -9,6 +9,10 @@
 #define KK(op) (op & 0x00FF)
 #define NNN(op) (op & 0x0FFF)
 
+//utility functions
+uint8_t sub(uint8_t x, uint8_t y);
+void draw_sprite(uint8_t x, uint8_t y, uint8_t n);
+
 char display[DISPLAY_HEIGHT * DISPLAY_WIDTH];
 
 uint8_t memory[MEM_SIZE];
@@ -31,6 +35,11 @@ void chip_init() {
     memset(stack, 0, sizeof(uint16_t) * 16);
 
     memset(display, 0, sizeof(char) * DISPLAY_HEIGHT * DISPLAY_WIDTH);
+    display[PIXEL(0,0)] = WHITE;
+    display[PIXEL(1,1)] = WHITE;
+    display[PIXEL(63,0)] = WHITE;
+    display[PIXEL(0,31)] = WHITE;
+    display[PIXEL(63,31)] = WHITE;
 }
 
 void chip_load(char *filename) {
@@ -111,9 +120,40 @@ void chip_cycle() {
             V[X(op)] += KK(op);
             PC += 2;
             break;
-        case 0x8000:
+        case 0x8000: //math operations on registers
             switch(op & 0x000F) {
-
+                case 0x0000: dprint("0x8xy0, set Vx = Vy\n");
+                    V[X(op)] = V[Y(op)];
+                    break;
+                case 0x0001: dprint("0x8xy1, Vx = Vx OR Vy\n");
+                    V[X(op)] = V[X(op)] | V[Y(op)];
+                    break;
+                case 0x0002: dprint("0x8xy2, Vx = Vx AND Vy\n");
+                    V[X(op)] = V[X(op)] & V[Y(op)];
+                    break;
+                case 0x0003: dprint("0x8xy3, Vx = Vx XOR Vy\n");
+                    V[X(op)] = V[X(op)] ^ V[Y(op)];
+                    break;
+                case 0x0004: dprint("0x8xy4, Vx = Vx + Vy, Vf = carry\n");
+                    //TODO: figure out a nicer way to set carry
+                    int result = V[X(op)] + V[Y(op)];
+                    V[0xf] = (result > 255) ? 1 : 0;
+                    V[X(op)] = (uint8_t)result;
+                    break;
+                case 0x0005: dprint("0x8xy5, Vx = Vx - Vy, Vf = NOT borrow\n");
+                    V[X(op)] = sub(V[X(op)], V[Y(op)]);
+                    break;
+                case 0x0006: dprint("0x8xy6, divide Vx by 2 with carry\n");
+                    V[0xf] = ((V[X(op)] & 0x000F) == 1) ? 1 : 0;
+                    V[X(op)] /= 2;
+                    break;
+                case 0x0007: dprint("0x8xy7, Vx = Vy - Vx, Vf = NOT borrow\n");
+                    V[X(op)] = sub(V[Y(op)], V[X(op)]);
+                    break;
+                case 0x000E: dprint("0x8xyE, multiply Vx by 2 with carry\n");
+                    V[0xf] = (((V[X(op)] >> 8) & 0x000F) == 1) ? 1 : 0;
+                    V[X(op)] *= 2;
+                    break;
             }
             PC += 2;
             break;
@@ -124,8 +164,37 @@ void chip_cycle() {
             I = NNN(op);
             PC += 2;
             break;
+        case 0xB000: dprint("0xBnnn, jump to nnn + V0\n");
+            PC = NNN(op) + V[0];
+            break;
+        case 0xD000: dprint("0xDxyn, draw n-byte sprite starting from I at Vx, Vy\n");
+            draw_sprite(V[X(op)], V[Y(op)], op & 0x000F);
+            PC += 2;
+            break;
         default:
             dprint("Unknown opcode: %x\n", op);
             PC+=2;
+    }
+}
+
+uint8_t sub(uint8_t x, uint8_t y) {
+    if(x > y) {
+        V[0xf] = 1;
+        return x - y;
+    } else {
+        V[0xf] = 0;
+        return y - x;
+    }
+}
+
+#define BITAT(x, i) ((x >> i) & 0x0F)
+
+void draw_sprite(uint8_t x, uint8_t y, uint8_t n) {
+    dprint("drawing sprite at %d, %d, memory %x @ %d\n", x, y, I, n);
+
+    for(int i = 0; i < n; i++) {
+        for(int j = 0; j < 8; j++) {
+            display[PIXEL(x + i, y + j)] = (BITAT(memory[I + i], j)) ? WHITE : BLACK;
+        }
     }
 }
