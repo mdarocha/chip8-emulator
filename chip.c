@@ -58,7 +58,7 @@ void print_registers() {
         if(i == 8)
             putchar('\n');
     }
-    printf("PC = %x\n SP = %x\n--\n", PC, SP);
+    printf("\nPC = %x, SP = %x, I = %x\n--\n", PC, SP, I);
 }
 
 void chip_cycle() {
@@ -94,8 +94,34 @@ void chip_cycle() {
             stack[SP++] = PC + 2;
             PC = NNN(op);
             break;
+        case 0x3000: dprint("0x3xkk, skip next if Vx == kk\n");
+            PC += (V[X(op)] == KK(op)) ? 4 : 2;
+            break;
+        case 0x4000: dprint("0x4xkk, skip next if Vx != kk\n");
+            PC += (V[X(op)] != KK(op)) ? 4 : 2;
+            break;
+        case 0x5000: dprint("0x5xy0, skip next if Vx == Vy\n");
+            PC += (V[X(op)] == V[Y(op)]) ? 4 : 2;
+            break;
         case 0x6000: dprint("0x6xkk, set Vx = kk\n");
             V[X(op)] = KK(op);
+            PC += 2;
+            break;
+        case 0x7000: dprint("0x7xkk, set Vx += kk\n");
+            V[X(op)] += KK(op);
+            PC += 2;
+            break;
+        case 0x8000:
+            switch(op & 0x000F) {
+
+            }
+            PC += 2;
+            break;
+        case 0x9000: dprint("0x9xy0, skip next if Vx != Vy\n");
+            PC += (V[X(op)] != V[Y(op)]) ? 4 : 2;
+            break;
+        case 0xA000: dprint("0xAnnn, set I = nnn\n");
+            I = NNN(op);
             PC += 2;
             break;
         default:
