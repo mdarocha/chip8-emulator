@@ -4,6 +4,11 @@
 #include <stdlib.h>
 #include "chip.h"
 
+#define X(op) ((op >> 8) & 0x000F)
+#define Y(op) ((op >> 4) & 0x000F)
+#define KK(op) (op & 0x00FF)
+#define NNN(op) (op & 0x0FFF)
+
 char display[DISPLAY_HEIGHT * DISPLAY_WIDTH];
 
 uint8_t memory[MEM_SIZE];
@@ -47,7 +52,20 @@ void chip_tick() {
         sound--;
 }
 
+void print_registers() {
+    for(int i = 0; i < 16; i++) {
+        printf("V[%x] = %x, ", i, V[i]);
+        if(i == 8)
+            putchar('\n');
+    }
+    printf("PC = %x\n SP = %x\n--\n", PC, SP);
+}
+
 void chip_cycle() {
+#ifdef DEBUG
+    print_registers();
+#endif
+
     if(PC >= MAX_ROM_SIZE) {
         printf("Error: memory out of bounds\n");
         exit(-1);
@@ -55,7 +73,31 @@ void chip_cycle() {
 
     uint16_t op = memory[PC] << 8 | memory[PC+1];
 
+    dprint("Running opcode %x\n", op);
+
     switch(op & 0xF000) {
+        case 0x0000:
+            switch(op & 0x00FF) {
+                case 0x00E0: dprint("0x00E0, clear display\n");
+                    memset(display, 0, DISPLAY_HEIGHT * DISPLAY_WIDTH);
+                    PC += 2;
+                    break;
+                case 0x00EE: dprint("0x00EE, return from subroutine\n");
+                    PC = stack[--SP];
+                    break;
+            }
+            break;
+        case 0x1000: dprint("0x1nnn, jump to nnn\n");
+            PC = NNN(op);
+            break;
+        case 0x2000: dprint("0x2nnn, call subroutine\n");
+            stack[SP++] = PC + 2;
+            PC = NNN(op);
+            break;
+        case 0x6000: dprint("0x6xkk, set Vx = kk\n");
+            V[X(op)] = KK(op);
+            PC += 2;
+            break;
         default:
             dprint("Unknown opcode: %x\n", op);
             PC+=2;
