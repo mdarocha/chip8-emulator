@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <unistd.h>
 #include <GL/glut.h>
 #include "chip.h"
 
@@ -6,10 +7,12 @@
 
 void update() {
     chip_cycle();
+    sleep(4);
 }
 
 void draw() {
     glClear(GL_COLOR_BUFFER_BIT);
+    glPixelZoom(DISPLAY_ZOOM, DISPLAY_ZOOM);
     glDrawPixels(DISPLAY_WIDTH, DISPLAY_HEIGHT, GL_LUMINANCE, GL_UNSIGNED_BYTE, display);
     glutSwapBuffers();
 }
