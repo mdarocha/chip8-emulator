@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <GL/glut.h>
+#include <sys/time.h>
 #include "chip.h"
 
 #define DISPLAY_ZOOM 5
@@ -12,11 +13,19 @@ void draw() {
     glutSwapBuffers();
 }
 
+struct timeval last, current, result;
+
 void update() {
     chip_cycle();
     draw();
 
-    chip_tick();
+    gettimeofday(&current, NULL);
+    timersub(&current, &last, &result);
+    if(result.tv_usec > TICK_US) {
+        dprint("time: %ld\n", result.tv_usec);
+        chip_tick();
+        gettimeofday(&last, NULL);
+    }
 }
 
 int keyboardMap(unsigned char key) {
@@ -80,6 +89,8 @@ int main(int argc, char *argv[]) {
     glutIdleFunc(update);
     glutKeyboardFunc(keyboardDown);
     glutKeyboardUpFunc(keyboardUp);
+
+    gettimeofday(&last, NULL);
 
     chip_init();
     chip_load(argv[1]);
