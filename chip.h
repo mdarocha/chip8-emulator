@@ -15,8 +15,10 @@
 #define PIXEL(x, y) ((DISPLAY_HEIGHT - y - 1) * DISPLAY_WIDTH + x)
 #define WHITE 255
 #define BLACK 0
-
 extern char display[DISPLAY_HEIGHT * DISPLAY_WIDTH];
+
+#define KEYS_NUM 16
+extern char keyboard[KEYS_NUM];
 
 void chip_init(void);
 void chip_load(char *filename);

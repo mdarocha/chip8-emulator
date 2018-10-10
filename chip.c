@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include "chip.h"
 #include "text.h"
 
@@ -13,8 +14,10 @@
 //utility functions
 uint8_t sub(uint8_t x, uint8_t y);
 void draw_sprite(uint8_t x, uint8_t y, uint8_t n);
+uint8_t random_num(void);
 
 char display[DISPLAY_HEIGHT * DISPLAY_WIDTH];
+char keyboard[KEYS_NUM];
 
 uint8_t memory[MEM_SIZE];
 uint8_t V[16];
@@ -39,6 +42,9 @@ void chip_init() {
     memset(stack, 0, sizeof(uint16_t) * 16);
 
     memset(display, 0, sizeof(char) * DISPLAY_HEIGHT * DISPLAY_WIDTH);
+    memset(keyboard, 0, sizeof(char) * KEYS_NUM);
+
+    srand(time(NULL));
 }
 
 void chip_load(char *filename) {
@@ -166,8 +172,63 @@ void chip_cycle() {
         case 0xB000: dprint("0xBnnn, jump to nnn + V0\n");
             PC = NNN(op) + V[0];
             break;
+        case 0xC000: dprint("0xCxkk, store random AND kk in Vx\n");
+            V[X(op)] = random_num() & KK(op);
+            PC += 2;
+            break;
         case 0xD000: dprint("0xDxyn, draw n-byte sprite starting from I at Vx, Vy\n");
             draw_sprite(V[X(op)], V[Y(op)], op & 0x000F);
+            PC += 2;
+            break;
+        case 0xE000:
+            switch(op & 0x00FF) {
+                case 0x009E: dprint("0xEx9E, skip next line if key with value of Vx is pressed\n");
+                    if(V[X(op)] >= KEYS_NUM) {
+                        dprint("bad Vx value\n");
+                        PC += 2;
+                    }
+                    PC += (keyboard[V[X(op)]] == 1) ? 4 : 2;
+                    break;
+                case 0x00A1: dprint("0xExA1, skip next line if key with value of Vx is not pressed\n");
+                    if(V[X(op)] >= KEYS_NUM) {
+                        dprint("bad Vx value\n");
+                        PC += 2;
+                    }
+                    PC += (keyboard[V[X(op)]] == 0) ? 4 : 2;
+                    break;
+            }
+            break;
+        case 0xF000:
+            switch(op & 0x00FF) {
+                case 0x0007: dprint("0xFx07, set Vx = delay timer\n");
+                    V[X(op)] = delay;
+                    break;
+                case 0x000A: dprint("0xFx0A, wait for key press and store it in Vx\n");
+                    //TODO
+                    break;
+                case 0x0015: dprint("0xFx15, set delay timer = Vx\n");
+                    delay = V[X(op)];
+                    break;
+                case 0x0018: dprint("0xFx18, set sound timer = Vx\n");
+                    sound = V[X(op)];
+                    break;
+                case 0x001E: dprint("0xFx1E, set I = I + Vx\n");
+                    I += V[X(op)];
+                    break;
+                case 0x0029: dprint("0xFx29, set I = location of sprite for digit in Vx\n");
+                    //TODO
+                    I = 0x0;
+                    break;
+                case 0x0033: dprint("0xFx33, store BCD of Vx in memory, starting at I\n");
+                    //TODO
+                    break;
+                case 0x0055: dprint("0xFx55, store registers V0-Vx in memory, starting at I\n");
+                    //TODO
+                    break;
+                case 0x0065: dprint("0xF65, read register V0-Vx from memory, starting at I\n");
+                    //TODO
+                    break;
+            }
             PC += 2;
             break;
         default:
@@ -198,7 +259,18 @@ void draw_sprite(uint8_t xpos, uint8_t ypos, uint8_t n) {
             int y = (ypos + byte) % DISPLAY_HEIGHT;
 
             int color = (BITAT(memory[I + byte], bit) == 1) ? WHITE : BLACK;
-            display[PIXEL(x, y)] = color;
+            if(color == WHITE) {
+                if(display[PIXEL(x, y)] == BLACK) {
+                    display[PIXEL(x, y)] = WHITE;
+                } else {
+                    V[0xf] = 1;
+                    display[PIXEL(x, y)] = BLACK;
+                }
+            }
         }
     }
+}
+
+uint8_t random_num() {
+    return rand() % 256;
 }
