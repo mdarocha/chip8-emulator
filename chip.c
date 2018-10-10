@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "chip.h"
+#include "text.h"
 
 #define X(op) ((op >> 8) & 0x000F)
 #define Y(op) ((op >> 4) & 0x000F)
@@ -26,6 +27,9 @@ uint16_t stack[16];
 
 void chip_init() {
     memset(memory, 0, sizeof(uint8_t) * MEM_SIZE);
+    //copy character data to the beggining of ram
+    memcpy(memory, characters, sizeof(characters) / sizeof(uint8_t));
+
     memset(V, 0, sizeof(uint8_t) * 16);
     I = 0;
     delay = 0;
@@ -35,11 +39,6 @@ void chip_init() {
     memset(stack, 0, sizeof(uint16_t) * 16);
 
     memset(display, 0, sizeof(char) * DISPLAY_HEIGHT * DISPLAY_WIDTH);
-    display[PIXEL(0,0)] = WHITE;
-    display[PIXEL(1,1)] = WHITE;
-    display[PIXEL(63,0)] = WHITE;
-    display[PIXEL(0,31)] = WHITE;
-    display[PIXEL(63,31)] = WHITE;
 }
 
 void chip_load(char *filename) {
@@ -187,14 +186,19 @@ uint8_t sub(uint8_t x, uint8_t y) {
     }
 }
 
-#define BITAT(x, i) ((x >> i) & 0x0F)
+#define BITAT(x, i) ((x >> i) & 0x1)
 
-void draw_sprite(uint8_t x, uint8_t y, uint8_t n) {
-    dprint("drawing sprite at %d, %d, memory %x @ %d\n", x, y, I, n);
+void draw_sprite(uint8_t xpos, uint8_t ypos, uint8_t n) {
+    dprint("drawing sprite at %d, %d, memory %x @ %d\n", xpos, ypos, I, n);
 
-    for(int i = 0; i < n; i++) {
-        for(int j = 0; j < 8; j++) {
-            display[PIXEL(x + i, y + j)] = (BITAT(memory[I + i], j)) ? WHITE : BLACK;
+    V[0xf] = 0;
+    for(int byte = 0; byte < n; byte++) {
+        for(int bit = 0; bit < 8; bit++) {
+            int x = (xpos + (7 - bit)) % DISPLAY_WIDTH;
+            int y = (ypos + byte) % DISPLAY_HEIGHT;
+
+            int color = (BITAT(memory[I + byte], bit) == 1) ? WHITE : BLACK;
+            display[PIXEL(x, y)] = color;
         }
     }
 }

@@ -5,16 +5,17 @@
 
 #define DISPLAY_ZOOM 5
 
-void update() {
-    chip_cycle();
-    sleep(4);
-}
-
 void draw() {
     glClear(GL_COLOR_BUFFER_BIT);
     glPixelZoom(DISPLAY_ZOOM, DISPLAY_ZOOM);
     glDrawPixels(DISPLAY_WIDTH, DISPLAY_HEIGHT, GL_LUMINANCE, GL_UNSIGNED_BYTE, display);
     glutSwapBuffers();
+}
+
+void update() {
+    chip_cycle();
+    draw();
+    sleep(1);
 }
 
 int main(int argc, char *argv[]) {

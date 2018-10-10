@@ -4,7 +4,7 @@ LDFLAGS += -lGL -lglut
 
 all: chip
 
-chip: chip.c chip.h main.c
+chip: chip.c chip.h main.c text.h
 	$(CC) $(CCFLAGS) $^ -o chip $(LDFLAGS)
 
 clean:
