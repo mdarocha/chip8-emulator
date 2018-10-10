@@ -22,6 +22,8 @@
 extern char display[DISPLAY_HEIGHT * DISPLAY_WIDTH];
 extern char keyboard[KEYS_NUM];
 
+extern int should_draw;
+
 void chip_init(void);
 void chip_load(char *filename);
 void chip_tick(void);

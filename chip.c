@@ -28,6 +28,8 @@ uint16_t PC;
 uint16_t SP;
 uint16_t stack[16];
 
+int should_draw;
+
 void chip_init() {
     memset(memory, 0, sizeof(uint8_t) * MEM_SIZE);
     //copy character data to the beggining of ram
@@ -45,6 +47,7 @@ void chip_init() {
     memset(keyboard, 0, sizeof(char) * KEYS_NUM);
 
     srand(time(NULL));
+    should_draw = 0;
 }
 
 void chip_load(char *filename) {
@@ -89,11 +92,14 @@ void chip_cycle() {
 
     dprint("Running opcode %x\n", op);
 
+    should_draw = 0;
+
     switch(op & 0xF000) {
         case 0x0000:
             switch(op & 0x00FF) {
                 case 0x00E0: dprint("0x00E0, clear display\n");
                     memset(display, 0, DISPLAY_HEIGHT * DISPLAY_WIDTH);
+                    should_draw = 1;
                     PC += 2;
                     break;
                 case 0x00EE: dprint("0x00EE, return from subroutine\n");
@@ -183,50 +189,46 @@ void chip_cycle() {
         case 0xE000:
             switch(op & 0x00FF) {
                 case 0x009E: dprint("0xEx9E, skip next line if key with value of Vx is pressed\n");
-                    if(V[X(op)] >= KEYS_NUM) {
-                        dprint("bad Vx value\n");
-                        PC += 2;
-                    }
                     PC += (keyboard[V[X(op)]] == 1) ? 4 : 2;
                     break;
                 case 0x00A1: dprint("0xExA1, skip next line if key with value of Vx is not pressed\n");
-                    if(V[X(op)] >= KEYS_NUM) {
-                        dprint("bad Vx value\n");
-                        PC += 2;
-                    }
                     PC += (keyboard[V[X(op)]] == 0) ? 4 : 2;
                     break;
             }
             break;
         case 0xF000:
-            switch(op & 0x00FF) {
-                case 0x0007: dprint("0xFx07, set Vx = delay timer\n");
+            switch(KK(op)) {
+                case 0x07: dprint("0xFx07, set Vx = delay timer\n");
                     V[X(op)] = delay;
                     break;
-                case 0x000A: dprint("0xFx0A, wait for key press and store it in Vx\n");
+                case 0x0A: dprint("0xFx0A, wait for key press and store it in Vx\n");
                     //TODO
                     break;
-                case 0x0015: dprint("0xFx15, set delay timer = Vx\n");
+                case 0x15: dprint("0xFx15, set delay timer = Vx\n");
                     delay = V[X(op)];
                     break;
-                case 0x0018: dprint("0xFx18, set sound timer = Vx\n");
+                case 0x18: dprint("0xFx18, set sound timer = Vx\n");
                     sound = V[X(op)];
                     break;
-                case 0x001E: dprint("0xFx1E, set I = I + Vx\n");
+                case 0x1E: dprint("0xFx1E, set I = I + Vx\n");
                     I += V[X(op)];
                     break;
-                case 0x0029: dprint("0xFx29, set I = location of sprite for digit in Vx\n");
-                    //TODO
-                    I = 0x0;
+                case 0x29: dprint("0xFx29, set I = location of sprite for digit in Vx\n");
+                    I = 0x0 + CHAR_LEN * V[X(op)];
                     break;
-                case 0x0033: dprint("0xFx33, store BCD of Vx in memory, starting at I\n");
-                    //TODO
+                case 0x33: dprint("0xFx33, store BCD of Vx in memory, starting at I\n");
+                    uint8_t i = V[X(op)];
+                    memory[I + 0] = (i % 1000) / 100;
+                    memory[I + 1] = (i % 100) / 10;
+                    memory[I + 2] = (i % 10);
                     break;
-                case 0x0055: dprint("0xFx55, store registers V0-Vx in memory, starting at I\n");
-                    //TODO
+                case 0x55: dprint("0xFx55, store registers V0-Vx in memory, starting at I\n");
+                    for(int i = 0; i < X(op); i++)
+                        memory[I + i] = V[i];
                     break;
-                case 0x0065: dprint("0xF65, read register V0-Vx from memory, starting at I\n");
-                    //TODO
+                case 0x65: dprint("0xF65, read register V0-Vx from memory, starting at I\n");
+                    for(int i = 0; i < X(op); i++)
+                        V[i] = memory[I + i];
                     break;
             }
             PC += 2;
@@ -260,6 +262,7 @@ void draw_sprite(uint8_t xpos, uint8_t ypos, uint8_t n) {
 
             int color = (BITAT(memory[I + byte], bit) == 1) ? WHITE : BLACK;
             if(color == WHITE) {
+                should_draw = 1;
                 if(display[PIXEL(x, y)] == BLACK) {
                     display[PIXEL(x, y)] = WHITE;
                 } else {

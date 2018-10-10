@@ -17,12 +17,13 @@ struct timeval last, current, result;
 
 void update() {
     chip_cycle();
-    draw();
+    if(should_draw)
+        draw();
 
     gettimeofday(&current, NULL);
     timersub(&current, &last, &result);
     if(result.tv_usec > TICK_US) {
-        dprint("time: %ld\n", result.tv_usec);
+        printf("time: %ld\n", result.tv_usec);
         chip_tick();
         gettimeofday(&last, NULL);
     }
