@@ -33,7 +33,7 @@ int should_draw;
 void chip_init() {
     memset(memory, 0, sizeof(uint8_t) * MEM_SIZE);
     //copy character data to the beggining of ram
-    memcpy(memory, characters, sizeof(characters) / sizeof(uint8_t));
+    memcpy(memory, characters, sizeof(uint8_t) * CHAR_LEN * 16);
 
     memset(V, 0, sizeof(uint8_t) * 16);
     I = 0;
@@ -148,22 +148,22 @@ void chip_cycle() {
                 case 0x0004: dprint("0x8xy4, Vx = Vx + Vy, Vf = carry\n");
                     //TODO: figure out a nicer way to set carry
                     int result = V[X(op)] + V[Y(op)];
-                    V[0xf] = (result > 255) ? 1 : 0;
+                    V[0xF] = (result > 255) ? 1 : 0;
                     V[X(op)] = (uint8_t)result;
                     break;
                 case 0x0005: dprint("0x8xy5, Vx = Vx - Vy, Vf = NOT borrow\n");
                     V[X(op)] = sub(V[X(op)], V[Y(op)]);
                     break;
                 case 0x0006: dprint("0x8xy6, divide Vx by 2 with carry\n");
-                    V[0xf] = ((V[X(op)] & 0x000F) == 1) ? 1 : 0;
-                    V[X(op)] /= 2;
+                    V[0xF] = V[X(op)] & 0x1;
+                    V[X(op)] >>= 1;
                     break;
                 case 0x0007: dprint("0x8xy7, Vx = Vy - Vx, Vf = NOT borrow\n");
                     V[X(op)] = sub(V[Y(op)], V[X(op)]);
                     break;
                 case 0x000E: dprint("0x8xyE, multiply Vx by 2 with carry\n");
-                    V[0xf] = (((V[X(op)] >> 8) & 0x000F) == 1) ? 1 : 0;
-                    V[X(op)] *= 2;
+                    V[0xF] = ((V[X(op)] >> 7) & 0x1);
+                    V[X(op)] <<= 1;
                     break;
             }
             PC += 2;
@@ -221,13 +221,14 @@ void chip_cycle() {
                     memory[I + 0] = (i % 1000) / 100;
                     memory[I + 1] = (i % 100) / 10;
                     memory[I + 2] = (i % 10);
+                    dprint("memory: %x - %x - %x\n", memory[I+0], memory[I+1], memory[I+2]);
                     break;
                 case 0x55: dprint("0xFx55, store registers V0-Vx in memory, starting at I\n");
-                    for(int i = 0; i < X(op); i++)
+                    for(uint8_t i = 0; i <= X(op); i++)
                         memory[I + i] = V[i];
                     break;
-                case 0x65: dprint("0xF65, read register V0-Vx from memory, starting at I\n");
-                    for(int i = 0; i < X(op); i++)
+                case 0x65: dprint("0xFx65, read register V0-Vx from memory, starting at I\n");
+                    for(uint8_t i = 0; i <= X(op); i++)
                         V[i] = memory[I + i];
                     break;
             }

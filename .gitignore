@@ -1,6 +1,7 @@
 chip
 test
 c8games
+log
 # Prerequisites
 *.d
 
