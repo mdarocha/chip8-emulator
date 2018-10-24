@@ -23,7 +23,7 @@ void update() {
     gettimeofday(&current, NULL);
     timersub(&current, &last, &result);
     if(result.tv_usec > TICK_US) {
-        printf("time: %ld\n", result.tv_usec);
+        dprint("time: %ld\n", result.tv_usec);
         chip_tick();
         gettimeofday(&last, NULL);
     }

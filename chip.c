@@ -29,6 +29,8 @@ uint16_t SP;
 uint16_t stack[16];
 
 int should_draw;
+int is_halted;
+int vx_to_store_key;
 
 void chip_init() {
     memset(memory, 0, sizeof(uint8_t) * MEM_SIZE);
@@ -48,6 +50,8 @@ void chip_init() {
 
     srand(time(NULL));
     should_draw = 0;
+    is_halted = 0;
+    vx_to_store_key = 0;
 }
 
 void chip_load(char *filename) {
@@ -79,6 +83,19 @@ void print_registers() {
 }
 
 void chip_cycle() {
+    if(is_halted) {
+        for(int i = 0; i < 16; i++) {
+            if(keyboard[i] == 1) {
+                V[vx_to_store_key] = i;
+                is_halted = 0;
+                goto end_halt;
+            }
+        }
+        return;
+    }
+
+end_halt:
+
 #ifdef DEBUG
     print_registers();
 #endif
@@ -202,7 +219,8 @@ void chip_cycle() {
                     V[X(op)] = delay;
                     break;
                 case 0x0A: dprint("0xFx0A, wait for key press and store it in Vx\n");
-                    //TODO
+                    is_halted = 1;
+                    vx_to_store_key = X(op);
                     break;
                 case 0x15: dprint("0xFx15, set delay timer = Vx\n");
                     delay = V[X(op)];
